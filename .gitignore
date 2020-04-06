@@ -1,0 +1,7 @@
+*.*
+*
+!.gitignore
+!client.py
+!server.py
+!dir
+!config.json
