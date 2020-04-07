@@ -15,7 +15,7 @@ def recvNextMsg(msgSocket, inputBuffer):
         inputBuffer = inputBuffer + data
         data = msgSocket.recv(MAXMSGLEN)
         for c in data:
-            if ord(c) == EOF:
+            if c == EOF:
                 left, right = data.split(EOF,1)
                 msg = inputBuffer + left
                 inputBuffer = right
@@ -28,7 +28,9 @@ def handle_client(msgSocket):
     print("inside new thread!")
     inputBuffer = ""
     msgSocket.sendall("Welcome to your FTP server! \nEnter USERNAME:" + EOF)
+    print("data sent!")
     newMsg, inputBuffer = recvNextMsg(msgSocket, inputBuffer)
+    print("data recieved ?")
     msgSocket.sendall("NEW" + newMsg + "NEW" + EOF)
     msgSocket.close()
 

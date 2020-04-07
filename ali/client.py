@@ -22,6 +22,7 @@ def recvNextMsg(msgSocket, inputBuffer):
                     return msg, inputBuffer
     except KeyboardInterrupt:
         if msgSocket:
+            msgSocket.sendall("QUIT" + EOF)
             msgSocket.close()
         sys.exit()
     
@@ -37,9 +38,8 @@ inputBuffer = ""
 print("here?")
 data, inputBuffer = recvNextMsg(msgSocket, inputBuffer)
 print(data)
-for i in data:
-    print(ord(i))
 print("stuck here?")
+msgSocket.sendall("hello n welcome why are u gey" + EOF)
 data, inputBuffer = recvNextMsg(msgSocket, inputBuffer)
 print("nah not stuck")
 print(data)
