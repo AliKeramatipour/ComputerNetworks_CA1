@@ -4,6 +4,7 @@ import sys
 import threading
 import json
 import os
+import shutil
 
 MSGPORT  = 9000
 FILEPORT = 9001
@@ -11,6 +12,7 @@ MAXLISTEN = 15
 EOF = chr(26)
 MAXMSGLEN = 1000
 DEFAULTDIR = "./dir"
+MINDIRLEN = 2
 
 #--------------------------------------------------------------
 
@@ -236,17 +238,119 @@ def CWD(inputs, currentDirectory, msgSocket):
     if len(inputs) == 0:
         currentDirectory = DEFAULTDIR
         sendMsg(msgSocket, "250 Successful Change.")
-        return
+        return currentDirectory
     
     data, inputs = inputs.split(" ",1)
     if len(inputs) != 0:
         sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+        return currentDirectory
+    
+    currentDirectoryList = currentDirectory.split("/")
+    directoryList = data.split("/")
+    for folder in directoryList:
+        if folder == '..':
+            if len(currentDirectoryList) <= MINDIRLEN:
+                sendMsg(msgSocket, "500 Not a valid directory.")
+                return currentDirectory
+            else:
+                currentDirectoryList.pop()
+                continue
+        elif folder == '.':
+            continue
+        if '.' in folder:
+            sendMsg(msgSocket, "500 Not a valid directory.")
+            return currentDirectory
+        
+        currentDirectoryList.append(folder)
+        tempDir = '/'.join(currentDirectoryList)
+        if not os.path.exists(tempDir):
+            sendMsg(msgSocket, "500 Not a valid directory.")
+            return currentDirectory
+    
+    sendMsg(msgSocket, "250 Successful Change.")
+    return '/'.join(currentDirectoryList)
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+def MKD(inputs, currentDirectory, msgSocket):
+    if len(inputs) != 0:
+        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
         return
     
+    flag, createDir = inputs.split(" ",1)
+    if len(createDir) != 0:
+        if flag != "-i":
+            sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+            return
+        if '/' in createDir or createDir == '.' or createDir == '..':
+            sendMsg(msgSocket, "500 Cannot have '/' in filename or '.' or '..' as filename")
+            return
+        if os.path.exists(currentDirectory + "/" + createDir):
+            sendMsg(msgSocket, "500 File already exists")
+            return
+        open(currentDirectory + "/" + createDir, 'w')
+        sendMsg(msgSocket, "257 " + createDir + " created.")
+        return
     
+    createDir = flag
+    if '/' in createDir or createDir == '.' or createDir == '..':
+        sendMsg(msgSocket, "500 Cannot have '/' in filename or '.' or '..' as filename")
+        return
+    if os.path.exists(currentDirectory + "/" + createDir):
+        sendMsg(msgSocket, "500 Folder already exists")
+        return
+    os.makedirs(currentDirectory + "/" + createDir)
+    sendMsg(msgSocket, "257 " + createDir + " created.")
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+def RMD(inputs, currentDirectory, msgSocket):
+    if len(inputs) != 0:
+        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+        return
     
+    flag, removeDir = inputs.split(" ",1)
+    if len(removeDir) != 0:
+        if flag != "-f":
+            sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+            return
+        if not os.path.exists(currentDirectory + "/" + removeDir):
+            sendMsg(msgSocket, "500 Folder does not exist")
+            return
+        shutil.rmtree(currentDirectory + "/" + removeDir)
+        sendMsg(msgSocket, "250 " + removeDir + " deleted.")
+        return
+    
+    removeDir = flag
+    if not os.path.exists(currentDirectory + "/" + removeDir):
+        sendMsg(msgSocket, "500 File does not exist")
+        return
+    os.remove(currentDirectory + "/" + removeDir)
+    sendMsg(msgSocket, "250 " + removeDir + " deleted.")
 
+#--------------------------------------------------------------
+#--------------------------------------------------------------
 
+def DL(inputs, currentDirectory, msgSocket, fileSocket):
+    if len(inputs) == 0:
+        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+        return
+    
+    filename, inputs = inputs.split(" ",1)
+    if len(inputs) != 0:
+        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+        return
+    
+    if not os.path.exists(currentDirectory + "/" + filename):
+        sendMsg(msgSocket, "500 File does not exist")
+        return
+
+    f = open(currentDirectory + "/" + filename, "rb")
+    data = f.read()
+    sendMsg(fileSocket, data)
+    sendMsg(msgSocket, "226 Successful Download.")
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------

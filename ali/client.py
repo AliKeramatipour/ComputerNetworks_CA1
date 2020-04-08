@@ -48,6 +48,7 @@ def sendMsg(message):
 #--------------------------------------------------------------
 
 PORT = int(raw_input("Enter port number: "))
+os.makedirs(str(PORT))
 global msgSocket
 global fileSocket
 msgSocket = socket(AF_INET, SOCK_STREAM)
@@ -83,6 +84,10 @@ while True:
         if cmd == "LIST":
             fileData, fileBuffer = recvNextFile(fileBuffer)
             print (fileData)
+        if ( cmd[0:2] == "DL" ):
+            f = open(cmd,"w+")
+            fileData, fileBuffer = recvNextFile(fileBuffer)
+            f.write(fileData)
         data, inputBuffer = recvNextMsg(inputBuffer) 
         print(data)
     except KeyboardInterrupt:
