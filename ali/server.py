@@ -131,21 +131,30 @@ def handle_client(msgSocket, fileSocket, address):
                 PWD(inputs, currentDirectory, msgSocket)
                 continue
             elif data == "MKD":
-                #MKD(inputs)
+                MKD(inputs, currentDirectory, msgSocket)
                 continue
             elif data == "RMD":
-                #RMD(inputs)
+                RMD(inputs, currentDirectory, msgSocket, userID)
                 continue
             elif data == "CWD":
-                #CWD(inputs)
+                CWD(inputs, currentDirectory, msgSocket)
                 continue
             elif data == "DL":
-                #DL(inputs)
+                DL(inputs, currentDirectory, msgSocket, fileSocket, userID)
+                if size[userID] < accountingThreshold:
+                    sendEmail(userID)
                 continue
         
 
     msgSocket.close()
     fileSocket.close()
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+def sendEmail(userID):
+    #sendEmail
+    return
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
@@ -306,34 +315,39 @@ def MKD(inputs, currentDirectory, msgSocket):
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
-def RMD(inputs, currentDirectory, msgSocket):
+def RMD(inputs, currentDirectory, msgSocket, userID):
     if len(inputs) != 0:
         sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
         return
     
     flag, removeDir = inputs.split(" ",1)
     if len(removeDir) != 0:
+        tmpDir = removeDir
+        removeDir = currentDirectory + "/" + removeDir
         if flag != "-f":
             sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
             return
-        if not os.path.exists(currentDirectory + "/" + removeDir):
-            sendMsg(msgSocket, "500 Folder does not exist")
+        if not os.path.exists(removeDir):
+            sendMsg(msgSocket, "510 Folder does not exist.")
             return
-        shutil.rmtree(currentDirectory + "/" + removeDir)
-        sendMsg(msgSocket, "250 " + removeDir + " deleted.")
+        shutil.rmtree(removeDir)
+        sendMsg(msgSocket, "250 " + tmpDir + " deleted.")
         return
     
     removeDir = flag
-    if not os.path.exists(currentDirectory + "/" + removeDir):
-        sendMsg(msgSocket, "500 File does not exist")
+    tmpDir = removeDir
+    removeDir = currentDirectory + "/" + removeDir
+
+    if (not os.path.exists(removeDir)) or (removeDir in authorizationFiles and admin[userID] == False):
+        sendMsg(msgSocket, "550 File unavailable.")
         return
-    os.remove(currentDirectory + "/" + removeDir)
-    sendMsg(msgSocket, "250 " + removeDir + " deleted.")
+    os.remove(removeDir)
+    sendMsg(msgSocket, "250 " + tmpDir + " deleted.")
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
-def DL(inputs, currentDirectory, msgSocket, fileSocket):
+def DL(inputs, currentDirectory, msgSocket, fileSocket, userID):
     if len(inputs) == 0:
         sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
         return
@@ -342,15 +356,21 @@ def DL(inputs, currentDirectory, msgSocket, fileSocket):
     if len(inputs) != 0:
         sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
         return
-    
-    if not os.path.exists(currentDirectory + "/" + filename):
-        sendMsg(msgSocket, "500 File does not exist")
+    downloadDir = currentDirectory + "/" + filename
+    if (not os.path.exists(downloadDir) or (downloadDir in authorizationFiles and admin[userID] == False)):
+        sendMsg(msgSocket, "550 File unavailable.")
         return
 
-    f = open(currentDirectory + "/" + filename, "rb")
+    f = open(downloadDir, "rb")
     data = f.read()
+    if data > size[userID] and accountingEnable:
+        sendMsg(fileSocket, "file can not be transimitted.")
+        sendMsg(msgSocket, "425 Can't open data connection.")
+        return
     sendMsg(fileSocket, data)
     sendMsg(msgSocket, "226 Successful Download.")
+    size[userID] -= len(data)
+    return
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
