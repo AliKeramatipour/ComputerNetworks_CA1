@@ -2,13 +2,14 @@ import time
 from socket import *
 import threading
 
-SERVERPORT = 9000
+MSGPORT  = 9000
+FILEPORT = 9001
 MAXLISTEN = 15
 EOF = chr(26)
 MAXMSGLEN = 1000
 #--------------------------------------------------------------
 
-def recvNextMsg(msgSocket, inputBuffer):
+def recvNextMsg(inputBuffer):
     data = left = right = ""
     try:
         while True:
@@ -22,27 +23,32 @@ def recvNextMsg(msgSocket, inputBuffer):
                     return msg, inputBuffer
     except KeyboardInterrupt:
         if msgSocket:
-            msgSocket.sendall("QUIT" + EOF)
+            sendMsg("QUIT")
             msgSocket.close()
         sys.exit()
     
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
+def sendMsg(message):
+    msgSocket.sendall(message + EOF)
+    return
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
 PORT = int(input("Enter port number:"))
+global msgSocket
+global fileSocket
 msgSocket = socket(AF_INET, SOCK_STREAM)
 msgSocket.bind(("", PORT))
-msgSocket.connect(("",SERVERPORT))
-inputBuffer = ""
+msgSocket.connect(("", MSGPORT))
 
-print("here?")
+fileSocket = socket(AF_INET, SOCK_STREAM)
+fileSocket.bind(("", PORT))
+fileSocket.connect(("", FILEPORT))
+
+
+inputBuffer = ""
 data, inputBuffer = recvNextMsg(msgSocket, inputBuffer)
-print(data)
-print("stuck here?")
-msgSocket.sendall("hello n welcome why are u gey" + EOF)
-data, inputBuffer = recvNextMsg(msgSocket, inputBuffer)
-print("nah not stuck")
-print(data)
-for i in data:
-    print(ord(i))
 msgSocket.close()
