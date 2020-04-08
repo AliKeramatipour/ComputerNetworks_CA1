@@ -3,17 +3,60 @@ from socket import *
 import sys
 import threading
 import json
+import os
 
 MSGPORT  = 9000
 FILEPORT = 9001
 MAXLISTEN = 15
 EOF = chr(26)
 MAXMSGLEN = 1000
+DEFAULTDIR = "./dir"
 
 #--------------------------------------------------------------
 
-def preprocessUsers():
+commands = ['USER','PASS','PWD','MKD','RMD','LIST','CWD','DL','HELP','QUIT']
+user = []
+password = []
+size = []
+email = []
+alert = []
+admin = []
+commandChannelPort = 0
+dataChannelPort = 0
+accountingEnable = False
+accountingThreshold = 0
+loggingEnable = False
+loggingPath = ""
+authorizationEnable = False
+authorizationFiles = []
 
+def preprocessUsers():
+    file = open ('config.json', "r") 
+    config = json.loads(file.read())
+    for i in config['users']: 
+        user.append(i['user']) 
+        password.append(i['password'])
+    for i in config['accounting']['users']:
+        size.append(i['size'])
+        email.append(i['email'])
+        alert.append(i['alert'])
+    for i in config['authorization']['admins']:
+        for j in user:
+            if j == i:
+                admin.append(1)
+            else:
+                admin.append(0)
+    commandChannelPort = config['commandChannelPort']
+    dataChannelPort = config['dataChannelPort']
+    accountingEnable = config['accounting']['enable']
+    accountingThreshold = config['accounting']['threshold']
+    loggingEnable = config['logging']['enable']
+    loggingPath = config['logging']['path']
+    authorizationEnable = config['authorization']['enable']
+
+    for i in config['authorization']['files']:
+        authorizationFiles.append(i)
+    file.close() 
     return
 
 #--------------------------------------------------------------
@@ -35,36 +78,175 @@ def recvNextMsg(msgSocket, inputBuffer):
 #--------------------------------------------------------------
 
 def handle_client(msgSocket, fileSocket, address):
-    print("-created new thread for user at " + address)
+    print("-created new thread for user at " + str(address[0]) + ' ' + str(address[1]))
+
     inputBuffer = ""
     loggedIn = False
-    #login
-    sendMsg(msgSocket, "Welcome to your FTP server! \nEnter USER and PASS commands:" )
-    
+    currentDirectory = DEFAULTDIR
+    currentUsername = ""
+    userID = 0
+
+    sendMsg(msgSocket, "Connection established. \nenter HELP for command list:" )
     while True:
         instruction, inputBuffer = recvNextMsg(msgSocket, inputBuffer)
+        print("--instruction recieved: " + instruction)
+        instruction = instruction + " "
         data, inputs = instruction.split(" ",1)
-        if data == "USER":
-            USER(inputs)
+
+        if not (data in commands):
+            sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+            continue
+        if data == "HELP":
+            HELP(inputs, msgSocket)
+            continue
+        elif data == "QUIT":
+            sendMsg(msgSocket, "221 Successful Quit.")
+            break
+        elif data == "USER":
+            if loggedIn == True:
+                sendMsg(msgSocket, "500 Already logged in.")
+                continue
+            currentUsername = USER(inputs, msgSocket)
+            continue
         elif data == "PASS":
-            PASS(inputs)
-        elif data == "PWD":
-            PWD(inputs)
-        elif data == "MKD":
-            MKD(inputs)
-        elif data == "RMD":
-            RMD(inputs)
-        elif data == "LIST":
-            LIST(inputs)
-        elif data == "CWD":
-            CWD(inputs)
-        elif data == "DL":
-            DL(inputs)
-        elif data == "HELP":
-            HELP(inputs)
-        elif data == "QUIT"
+            if loggedIn == True:
+                sendMsg(msgSocket, "500 Already logged in.")
+                continue
+            userID = PASS(inputs, currentUsername, msgSocket)
+            if userID == -1:
+                currentUsername = ""
+            else:
+                loggedIn = True
+            continue
+        elif loggedIn == False:
+            sendMsg(msgSocket, "332 Need account for login.")
+            continue
+        else:
+            if data == "LIST":
+                LIST(currentDirectory, inputs, msgSocket, fileSocket)
+                continue
+            elif data == "PWD":
+                PWD(inputs, currentDirectory, msgSocket)
+                continue
+            elif data == "MKD":
+                #MKD(inputs)
+                continue
+            elif data == "RMD":
+                #RMD(inputs)
+                continue
+            elif data == "CWD":
+                #CWD(inputs)
+                continue
+            elif data == "DL":
+                #DL(inputs)
+                continue
+        
 
     msgSocket.close()
+    fileSocket.close()
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+def HELP(inputs, msgSocket):
+    if len(inputs) != 0:
+        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+        return
+
+    file = open("etc/help.txt","r") 
+    sendMsg(msgSocket, file.read())
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+def QUIT(inputs, msgSocket):
+    if len(inputs) != 0:
+        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+        return
+    
+    print("--user quiting")
+    sendMsg(msgSocket, "221 Successful Quit.")
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+def USER(inputs, msgSocket):
+    if len(inputs) == 0:
+        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+        return ""
+
+    data, inputs = inputs.split(" ",1)
+    if len(inputs) != 0:
+        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+        return ""
+    sendMsg(msgSocket, "331 User name okay, need password.")
+    return data
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+def PASS(inputs, currentUsername, msgSocket):
+    data, inputs = inputs.split(" ",1)
+
+    if len(currentUsername) == 0:
+        sendMsg(msgSocket, "503 Bad sequence of commands.")
+        return -1
+    
+    if len(inputs) != 0:
+        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+        return -1
+    
+    for i in range(0, len(user)):
+        if user[i] == currentUsername:
+            sendMsg(msgSocket, "230 User logged in, proceed.")
+            return i
+
+    sendMsg(msgSocket, "430 Invalid username or password.")
+    return -1
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+def LIST(currentDirectory, inputs, msgSocket, fileSocket):
+    if len(inputs) != 0:
+        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+        return
+
+    listOfFiles = ""
+    for file in os.listdir(currentDirectory):
+        if file[0] != '.' and '.ini' not in file and '.BIN' not in file :
+            listOfFiles += file + '\n'
+    listOfFiles = listOfFiles[:-1]
+    sendMsg(msgSocket, "226 List transfer done.")
+    sendMsg(fileSocket, listOfFiles)
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+def PWD(inputs, currentDirectory, msgSocket):
+    if len(inputs) != 0:
+        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+        return
+    sendMsg(msgSocket, "257 " + currentDirectory)
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+def CWD(inputs, currentDirectory, msgSocket):
+    if len(inputs) == 0:
+        currentDirectory = DEFAULTDIR
+        sendMsg(msgSocket, "250 Successful Change.")
+        return
+    
+    data, inputs = inputs.split(" ",1)
+    if len(inputs) != 0:
+        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
+        return
+    
+    
+    
+
+
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
@@ -81,6 +263,7 @@ def sendMsg(msgSocket, message):
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
+preprocessUsers()
 msgListenSocket = socket(AF_INET, SOCK_STREAM)
 msgListenSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 msgListenSocket.bind(("", MSGPORT))

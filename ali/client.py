@@ -1,6 +1,7 @@
 import time
 from socket import *
 import threading
+import sys
 
 MSGPORT  = 9000
 FILEPORT = 9001
@@ -11,21 +12,30 @@ MAXMSGLEN = 1000
 
 def recvNextMsg(inputBuffer):
     data = left = right = ""
-    try:
-        while True:
-            inputBuffer = inputBuffer + data
-            data = msgSocket.recv(MAXMSGLEN)
-            for c in data:
-                if c == EOF:
-                    left,right = data.split(EOF,1)
-                    msg = inputBuffer + left
-                    inputBuffer = right
-                    return msg, inputBuffer
-    except KeyboardInterrupt:
-        if msgSocket:
-            sendMsg("QUIT")
-            msgSocket.close()
-        sys.exit()
+    while True:
+        inputBuffer = inputBuffer + data
+        data = msgSocket.recv(MAXMSGLEN)
+        for c in data:
+            if c == EOF:
+                left,right = data.split(EOF,1)
+                msg = inputBuffer + left
+                inputBuffer = right
+                return msg, inputBuffer
+    
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+def recvNextFile(fileBuffer):
+    data = left = right = ""
+    while True:
+        fileBuffer = fileBuffer + data
+        data = fileSocket.recv(MAXMSGLEN)
+        for c in data:
+            if c == EOF:
+                left,right = data.split(EOF,1)
+                msg = fileBuffer + left
+                fileBuffer = right
+                return msg, fileBuffer
     
 #--------------------------------------------------------------
 #--------------------------------------------------------------
@@ -37,18 +47,46 @@ def sendMsg(message):
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
-PORT = int(input("Enter port number:"))
+PORT = int(raw_input("Enter port number: "))
 global msgSocket
 global fileSocket
 msgSocket = socket(AF_INET, SOCK_STREAM)
 msgSocket.bind(("", PORT))
-msgSocket.connect(("", MSGPORT))
+try :
+    msgSocket.connect(("", MSGPORT))
+except error:
+    print("500 could not establish connection to server")
+    msgSocket.close()
+    sys.exit()
 
 fileSocket = socket(AF_INET, SOCK_STREAM)
-fileSocket.bind(("", PORT))
-fileSocket.connect(("", FILEPORT))
+fileSocket.bind(("", PORT + 1))
+
+try:
+    fileSocket.connect(("", FILEPORT))
+except error:
+    print("500 could not establish connection to server")
+    msgSocket.close()
+    fileSocket.close()
+    sys.exit()
 
 
-inputBuffer = ""
-data, inputBuffer = recvNextMsg(msgSocket, inputBuffer)
-msgSocket.close()
+data = inputBuffer = fileData = fileBuffer = ""
+data, inputBuffer = recvNextMsg(inputBuffer) 
+print(data)
+while True:
+    try:
+        cmd = raw_input("your next command: ")
+        sendMsg(cmd)
+        if cmd == "QUIT":
+            sys.exit()
+        if cmd == "LIST":
+            fileData, fileBuffer = recvNextFile(fileBuffer)
+            print (fileData)
+        data, inputBuffer = recvNextMsg(inputBuffer) 
+        print(data)
+    except KeyboardInterrupt:
+        msgSocket.close()
+        fileSocket.close()
+        sys.exit()
+
