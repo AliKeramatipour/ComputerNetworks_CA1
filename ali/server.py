@@ -38,14 +38,31 @@ def handle_client(msgSocket, fileSocket, address):
     print("-created new thread for user at " + address)
     inputBuffer = ""
     loggedIn = False
-    #username
-    msgSocket.sendall("Welcome to your FTP server! \nEnter USERNAME:" + EOF)
-
+    #login
+    sendMsg(msgSocket, "Welcome to your FTP server! \nEnter USER and PASS commands:" )
+    
     while True:
         instruction, inputBuffer = recvNextMsg(msgSocket, inputBuffer)
-        
-
-
+        data, inputs = instruction.split(" ",1)
+        if data == "USER":
+            USER(inputs)
+        elif data == "PASS":
+            PASS(inputs)
+        elif data == "PWD":
+            PWD(inputs)
+        elif data == "MKD":
+            MKD(inputs)
+        elif data == "RMD":
+            RMD(inputs)
+        elif data == "LIST":
+            LIST(inputs)
+        elif data == "CWD":
+            CWD(inputs)
+        elif data == "DL":
+            DL(inputs)
+        elif data == "HELP":
+            HELP(inputs)
+        elif data == "QUIT"
 
     msgSocket.close()
 
@@ -58,8 +75,8 @@ def on_press(key):
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
-def sendMsg(key):
-    print (key)
+def sendMsg(msgSocket, message):
+    msgSocket.sendall(message + EOF)
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
