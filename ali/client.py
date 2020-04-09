@@ -72,6 +72,10 @@ while True:
     try:
         cmd = raw_input("your next command: ")
         sendMsg(cmd)
+        data, inputBuffer = recvNextMsg(msgSocket, inputBuffer) 
+        print(data)
+        if data[0:3] == "332":
+            continue
         if cmd == "QUIT":
             sys.exit()
         if cmd == "LIST":
@@ -82,8 +86,6 @@ while True:
             fileData, fileBuffer = recvNextMsg(fileSocket, fileBuffer)
             f.write(fileData)
             f.close()
-        data, inputBuffer = recvNextMsg(msgSocket, inputBuffer) 
-        print(data)
     except:
         msgSocket.close()
         fileSocket.close()

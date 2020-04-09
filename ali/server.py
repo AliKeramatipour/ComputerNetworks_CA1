@@ -125,9 +125,9 @@ def handle_client(msgSocket, fileSocket, address):
             else:
                 loggedIn = True
             continue
-        # elif loggedIn == False:
-        #     sendMsg(msgSocket, "332 Need account for login.")
-        #     continue
+        elif loggedIn == False:
+            sendMsg(msgSocket, "332 Need account for login.")
+            continue
         else:
             if data == "LIST":
                 LIST(currentDirectory, inputs, msgSocket, fileSocket)
@@ -192,10 +192,7 @@ def USER(inputs, msgSocket):
         sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
         return ""
 
-    data, inputs = inputs.split(" ",1)
-    if len(inputs) != 0:
-        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
-        return ""
+    data = inputs[:-1]
     sendMsg(msgSocket, "331 User name okay, need password.")
     return data
 
@@ -369,8 +366,8 @@ def DL(inputs, currentDirectory, msgSocket, fileSocket, userID):
         sendMsg(fileSocket, "file can not be transimitted.")
         sendMsg(msgSocket, "425 Can't open data connection.")
         return
+    sendMsg(msgSocket, "226 Successful Download.")    
     sendMsg(fileSocket, data)
-    sendMsg(msgSocket, "226 Successful Download.")
     size[userID] -= len(data)
     return
 
