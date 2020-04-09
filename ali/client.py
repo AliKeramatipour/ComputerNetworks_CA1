@@ -2,6 +2,7 @@ import time
 from socket import *
 import threading
 import sys
+import os
 
 MSGPORT  = 9000
 FILEPORT = 9001
@@ -11,31 +12,41 @@ MAXMSGLEN = 1000
 #--------------------------------------------------------------
 
 def recvNextMsg(inputBuffer):
-    data = left = right = ""
+    data = ""
     while True:
-        inputBuffer = inputBuffer + data
         data = msgSocket.recv(MAXMSGLEN)
-        for c in data:
-            if c == EOF:
-                left,right = data.split(EOF,1)
-                msg = inputBuffer + left
-                inputBuffer = right
-                return msg, inputBuffer
-    
+        inputBuffer = inputBuffer + data
+        
+        if len(inputBuffer) % 2 == 1:
+            continue
+        
+        msg = ""
+        for i in range(0, len(inputBuffer)):
+            if i % 2 == 0:
+                msg = msg + inputBuffer[i]
+            else:
+                if inputBuffer[i] == '1':
+                    return msg, inputBuffer[i+1:]
+                
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
 def recvNextFile(fileBuffer):
-    data = left = right = ""
+    data = ""
     while True:
-        fileBuffer = fileBuffer + data
         data = fileSocket.recv(MAXMSGLEN)
-        for c in data:
-            if c == EOF:
-                left,right = data.split(EOF,1)
-                msg = fileBuffer + left
-                fileBuffer = right
-                return msg, fileBuffer
+        fileBuffer = fileBuffer + data
+
+        if len(fileBuffer) % 2 == 1:
+            continue
+
+        msg = ""
+        for i in range(0, len(fileBuffer)):
+            if i % 2 == 0:
+                msg += fileBuffer[i]
+            else:
+                if fileBuffer[i] == '1':
+                    return msg, fileBuffer[i+1:]
     
 #--------------------------------------------------------------
 #--------------------------------------------------------------
@@ -48,7 +59,11 @@ def sendMsg(message):
 #--------------------------------------------------------------
 
 PORT = int(raw_input("Enter port number: "))
-os.makedirs(str(PORT))
+PATH = "clients/" + str(PORT)
+if not os.path.exists(PATH):
+    os.makedirs(str(PATH))
+PATH += "/"
+
 global msgSocket
 global fileSocket
 msgSocket = socket(AF_INET, SOCK_STREAM)
@@ -85,12 +100,15 @@ while True:
             fileData, fileBuffer = recvNextFile(fileBuffer)
             print (fileData)
         if ( cmd[0:2] == "DL" ):
-            f = open(cmd,"w+")
+            print(" we saving ?")
+            f = open(PATH + cmd,"w+")
             fileData, fileBuffer = recvNextFile(fileBuffer)
+            print(len(fileData))
             f.write(fileData)
+            f.close()
         data, inputBuffer = recvNextMsg(inputBuffer) 
         print(data)
-    except KeyboardInterrupt:
+    except:
         msgSocket.close()
         fileSocket.close()
         sys.exit()

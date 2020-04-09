@@ -33,21 +33,26 @@ authorizationEnable = False
 authorizationFiles = []
 
 def preprocessUsers():
-    file = open ('config.json', "r") 
+    global commandChannelPort, dataChannelPort, accountingEnable, accountingThreshold, loggingEnable, loggingPath, authorizationEnable, authorizationFiles
+    file = open ('etc/config.json', "r") 
     config = json.loads(file.read())
+
     for i in config['users']: 
         user.append(i['user']) 
         password.append(i['password'])
+
     for i in config['accounting']['users']:
-        size.append(i['size'])
+        size.append(int(i['size']))
         email.append(i['email'])
         alert.append(i['alert'])
+
     for i in config['authorization']['admins']:
         for j in user:
             if j == i:
                 admin.append(1)
             else:
                 admin.append(0)
+
     commandChannelPort = config['commandChannelPort']
     dataChannelPort = config['dataChannelPort']
     accountingEnable = config['accounting']['enable']
@@ -58,7 +63,7 @@ def preprocessUsers():
 
     for i in config['authorization']['files']:
         authorizationFiles.append(i)
-    file.close() 
+    file.close()
     return
 
 #--------------------------------------------------------------
@@ -88,7 +93,7 @@ def handle_client(msgSocket, fileSocket, address):
     currentUsername = ""
     userID = 0
 
-    sendMsg(msgSocket, "Connection established. \nenter HELP for command list:" )
+    sendMsg(msgSocket, "Connection established. \nenter HELP for command list." )
     while True:
         instruction, inputBuffer = recvNextMsg(msgSocket, inputBuffer)
         print("--instruction recieved: " + instruction)
@@ -120,9 +125,9 @@ def handle_client(msgSocket, fileSocket, address):
             else:
                 loggedIn = True
             continue
-        elif loggedIn == False:
-            sendMsg(msgSocket, "332 Need account for login.")
-            continue
+        # elif loggedIn == False:
+        #     sendMsg(msgSocket, "332 Need account for login.")
+        #     continue
         else:
             if data == "LIST":
                 LIST(currentDirectory, inputs, msgSocket, fileSocket)
@@ -137,7 +142,7 @@ def handle_client(msgSocket, fileSocket, address):
                 RMD(inputs, currentDirectory, msgSocket, userID)
                 continue
             elif data == "CWD":
-                CWD(inputs, currentDirectory, msgSocket)
+                currentDirectory = CWD(inputs, currentDirectory, msgSocket)
                 continue
             elif data == "DL":
                 DL(inputs, currentDirectory, msgSocket, fileSocket, userID)
@@ -148,6 +153,7 @@ def handle_client(msgSocket, fileSocket, address):
 
     msgSocket.close()
     fileSocket.close()
+    print("--user QUITING")
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
@@ -348,6 +354,7 @@ def RMD(inputs, currentDirectory, msgSocket, userID):
 #--------------------------------------------------------------
 
 def DL(inputs, currentDirectory, msgSocket, fileSocket, userID):
+    global accountingEnable
     if len(inputs) == 0:
         sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
         return
@@ -356,6 +363,7 @@ def DL(inputs, currentDirectory, msgSocket, fileSocket, userID):
     if len(inputs) != 0:
         sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
         return
+    
     downloadDir = currentDirectory + "/" + filename
     if (not os.path.exists(downloadDir) or (downloadDir in authorizationFiles and admin[userID] == False)):
         sendMsg(msgSocket, "550 File unavailable.")
@@ -363,7 +371,11 @@ def DL(inputs, currentDirectory, msgSocket, fileSocket, userID):
 
     f = open(downloadDir, "rb")
     data = f.read()
-    if data > size[userID] and accountingEnable:
+    print (len(data))
+    print (size[userID])
+    print(accountingEnable)
+    accountingEnable = 0
+    if len(data) > size[userID] and accountingEnable:
         sendMsg(fileSocket, "file can not be transimitted.")
         sendMsg(msgSocket, "425 Can't open data connection.")
         return
@@ -382,7 +394,12 @@ def on_press(key):
 #--------------------------------------------------------------
 
 def sendMsg(msgSocket, message):
-    msgSocket.sendall(message + EOF)
+    newMessage = ""
+    for i in range(0,len(message) - 1):
+        newMessage += message[i] + '0'
+    newMessage += message[len(message) - 1] + '1'
+    print(newMessage)
+    msgSocket.sendall(newMessage)
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
@@ -408,7 +425,6 @@ while True:
         t = threading.Thread(target = handle_client, args = (msgSocket, fileSocket, address))
         t.setDaemon(True)
         t.start()
-        print ("recieved connection from",address)
     except KeyboardInterrupt:
         print("got Keyboard interrupt in main Program!")
         msgListenSocket.close()
