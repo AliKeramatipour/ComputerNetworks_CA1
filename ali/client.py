@@ -11,7 +11,7 @@ EOF = chr(26)
 MAXMSGLEN = 1000
 #--------------------------------------------------------------
 
-def recvNextMsg(inputBuffer):
+def recvNextMsg(msgSocket, inputBuffer):
     data = ""
     while True:
         data = msgSocket.recv(MAXMSGLEN)
@@ -22,32 +22,12 @@ def recvNextMsg(inputBuffer):
         
         msg = ""
         for i in range(0, len(inputBuffer)):
-            if i % 2 == 0:
+            if i % 2 == 1:
                 msg = msg + inputBuffer[i]
             else:
                 if inputBuffer[i] == '1':
-                    return msg, inputBuffer[i+1:]
+                    return msg, inputBuffer[i+2:]
                 
-#--------------------------------------------------------------
-#--------------------------------------------------------------
-
-def recvNextFile(fileBuffer):
-    data = ""
-    while True:
-        data = fileSocket.recv(MAXMSGLEN)
-        fileBuffer = fileBuffer + data
-
-        if len(fileBuffer) % 2 == 1:
-            continue
-
-        msg = ""
-        for i in range(0, len(fileBuffer)):
-            if i % 2 == 0:
-                msg += fileBuffer[i]
-            else:
-                if fileBuffer[i] == '1':
-                    return msg, fileBuffer[i+1:]
-    
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
@@ -64,8 +44,6 @@ if not os.path.exists(PATH):
     os.makedirs(str(PATH))
 PATH += "/"
 
-global msgSocket
-global fileSocket
 msgSocket = socket(AF_INET, SOCK_STREAM)
 msgSocket.bind(("", PORT))
 try :
@@ -88,7 +66,7 @@ except error:
 
 
 data = inputBuffer = fileData = fileBuffer = ""
-data, inputBuffer = recvNextMsg(inputBuffer) 
+data, inputBuffer = recvNextMsg(msgSocket, inputBuffer) 
 print(data)
 while True:
     try:
@@ -97,16 +75,14 @@ while True:
         if cmd == "QUIT":
             sys.exit()
         if cmd == "LIST":
-            fileData, fileBuffer = recvNextFile(fileBuffer)
+            fileData, fileBuffer = recvNextMsg(fileSocket, fileBuffer)
             print (fileData)
         if ( cmd[0:2] == "DL" ):
-            print(" we saving ?")
             f = open(PATH + cmd,"w+")
-            fileData, fileBuffer = recvNextFile(fileBuffer)
-            print(len(fileData))
+            fileData, fileBuffer = recvNextMsg(fileSocket, fileBuffer)
             f.write(fileData)
             f.close()
-        data, inputBuffer = recvNextMsg(inputBuffer) 
+        data, inputBuffer = recvNextMsg(msgSocket, inputBuffer) 
         print(data)
     except:
         msgSocket.close()

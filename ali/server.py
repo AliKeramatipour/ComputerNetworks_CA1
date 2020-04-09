@@ -203,18 +203,14 @@ def USER(inputs, msgSocket):
 #--------------------------------------------------------------
 
 def PASS(inputs, currentUsername, msgSocket):
-    data, inputs = inputs.split(" ",1)
+    data = inputs[:-1]
 
     if len(currentUsername) == 0:
         sendMsg(msgSocket, "503 Bad sequence of commands.")
         return -1
     
-    if len(inputs) != 0:
-        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
-        return -1
-    
     for i in range(0, len(user)):
-        if user[i] == currentUsername:
+        if user[i] == currentUsername and password[i] == data:
             sendMsg(msgSocket, "230 User logged in, proceed.")
             return i
 
@@ -250,16 +246,12 @@ def PWD(inputs, currentDirectory, msgSocket):
 #--------------------------------------------------------------
 
 def CWD(inputs, currentDirectory, msgSocket):
-    if len(inputs) == 0:
+    if len(inputs) == 0 or inputs == " ":
         currentDirectory = DEFAULTDIR
         sendMsg(msgSocket, "250 Successful Change.")
         return currentDirectory
     
-    data, inputs = inputs.split(" ",1)
-    if len(inputs) != 0:
-        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
-        return currentDirectory
-    
+    data = inputs[:-1]
     currentDirectoryList = currentDirectory.split("/")
     directoryList = data.split("/")
     for folder in directoryList:
@@ -289,15 +281,13 @@ def CWD(inputs, currentDirectory, msgSocket):
 #--------------------------------------------------------------
 
 def MKD(inputs, currentDirectory, msgSocket):
-    if len(inputs) != 0:
+    if len(inputs) == 0:
         sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
         return
     
     flag, createDir = inputs.split(" ",1)
-    if len(createDir) != 0:
-        if flag != "-i":
-            sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
-            return
+    if flag == "-i":
+        createDir = createDir[:-1]
         if '/' in createDir or createDir == '.' or createDir == '..':
             sendMsg(msgSocket, "500 Cannot have '/' in filename or '.' or '..' as filename")
             return
@@ -305,10 +295,11 @@ def MKD(inputs, currentDirectory, msgSocket):
             sendMsg(msgSocket, "500 File already exists")
             return
         open(currentDirectory + "/" + createDir, 'w')
-        sendMsg(msgSocket, "257 " + createDir + " created.")
+        sendMsg(msgSocket, "257 " + createDir + " file created.")
         return
     
-    createDir = flag
+    createDir = flag + " " + createDir
+    createDir = createDir[:-1]
     if '/' in createDir or createDir == '.' or createDir == '..':
         sendMsg(msgSocket, "500 Cannot have '/' in filename or '.' or '..' as filename")
         return
@@ -316,39 +307,42 @@ def MKD(inputs, currentDirectory, msgSocket):
         sendMsg(msgSocket, "500 Folder already exists")
         return
     os.makedirs(currentDirectory + "/" + createDir)
-    sendMsg(msgSocket, "257 " + createDir + " created.")
+    sendMsg(msgSocket, "257 " + createDir + " folder created.")
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
 def RMD(inputs, currentDirectory, msgSocket, userID):
-    if len(inputs) != 0:
+    if len(inputs) == 0:
         sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
         return
     
     flag, removeDir = inputs.split(" ",1)
-    if len(removeDir) != 0:
-        tmpDir = removeDir
-        removeDir = currentDirectory + "/" + removeDir
-        if flag != "-f":
+    if flag == "-f":
+        if len(removeDir) == 0:
             sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
             return
+        removeDir = removeDir[:-1]
+        tmpDir = removeDir
+        removeDir = currentDirectory + "/" + removeDir
         if not os.path.exists(removeDir):
             sendMsg(msgSocket, "510 Folder does not exist.")
             return
         shutil.rmtree(removeDir)
-        sendMsg(msgSocket, "250 " + tmpDir + " deleted.")
+        sendMsg(msgSocket, "250 " + tmpDir + " folder deleted.")
         return
     
-    removeDir = flag
+    removeDir = flag + removeDir
     tmpDir = removeDir
     removeDir = currentDirectory + "/" + removeDir
+    removeDir = removeDir[:-1]
 
     if (not os.path.exists(removeDir)) or (removeDir in authorizationFiles and admin[userID] == False):
         sendMsg(msgSocket, "550 File unavailable.")
         return
+    
     os.remove(removeDir)
-    sendMsg(msgSocket, "250 " + tmpDir + " deleted.")
+    sendMsg(msgSocket, "250 " + tmpDir + " file deleted.")
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
@@ -371,10 +365,6 @@ def DL(inputs, currentDirectory, msgSocket, fileSocket, userID):
 
     f = open(downloadDir, "rb")
     data = f.read()
-    print (len(data))
-    print (size[userID])
-    print(accountingEnable)
-    accountingEnable = 0
     if len(data) > size[userID] and accountingEnable:
         sendMsg(fileSocket, "file can not be transimitted.")
         sendMsg(msgSocket, "425 Can't open data connection.")
@@ -395,10 +385,9 @@ def on_press(key):
 
 def sendMsg(msgSocket, message):
     newMessage = ""
-    for i in range(0,len(message) - 1):
-        newMessage += message[i] + '0'
-    newMessage += message[len(message) - 1] + '1'
-    print(newMessage)
+    for i in range(0,len(message)):
+        newMessage += '0' + message[i]
+    newMessage += '1' + '0'
     msgSocket.sendall(newMessage)
 
 #--------------------------------------------------------------
