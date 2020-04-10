@@ -5,9 +5,9 @@ import threading
 import json
 import os
 import shutil
+import logging
+from datetime import *
 
-MSGPORT  = 9000
-FILEPORT = 9001
 MAXLISTEN = 15
 EOF = chr(26)
 MAXMSGLEN = 1000
@@ -69,6 +69,16 @@ def preprocessUsers():
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
+def writeLog(text):
+    if loggingEnable == False:
+        return
+    with open(loggingPath, 'a') as log:
+        log.write("{0} - {1}\n\n".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),str(text)))
+    return
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
 def recvNextMsg(msgSocket, inputBuffer):
     data = ""
     while True:
@@ -84,19 +94,17 @@ def recvNextMsg(msgSocket, inputBuffer):
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
-def handle_client(msgSocket, fileSocket, address):
-    print("-created new thread for user at " + str(address[0]) + ' ' + str(address[1]))
-
+def handle_client(msgSocket, fileSocket, address, connectionID):
     inputBuffer = ""
     loggedIn = False
     currentDirectory = DEFAULTDIR
     currentUsername = ""
     userID = 0
-
+    
     sendMsg(msgSocket, "Connection established. \nenter HELP for command list." )
     while True:
         instruction, inputBuffer = recvNextMsg(msgSocket, inputBuffer)
-        print("--instruction recieved: " + instruction)
+        writeLog("Instruction recieved on connection: " + str(connectionID) + "\n" + instruction)
         instruction = instruction + " "
         data, inputs = instruction.split(" ",1)
 
@@ -124,6 +132,7 @@ def handle_client(msgSocket, fileSocket, address):
                 currentUsername = ""
             else:
                 loggedIn = True
+                writeLog("Connection " + str(connectionID) + " is now logged in as : " + currentUsername)
             continue
         elif loggedIn == False:
             sendMsg(msgSocket, "332 Need account for login.")
@@ -136,10 +145,10 @@ def handle_client(msgSocket, fileSocket, address):
                 PWD(inputs, currentDirectory, msgSocket)
                 continue
             elif data == "MKD":
-                MKD(inputs, currentDirectory, msgSocket)
+                MKD(inputs, currentDirectory, msgSocket, connectionID)
                 continue
             elif data == "RMD":
-                RMD(inputs, currentDirectory, msgSocket, userID)
+                RMD(inputs, currentDirectory, msgSocket, userID, connectionID)
                 continue
             elif data == "CWD":
                 currentDirectory = CWD(inputs, currentDirectory, msgSocket)
@@ -277,7 +286,7 @@ def CWD(inputs, currentDirectory, msgSocket):
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
-def MKD(inputs, currentDirectory, msgSocket):
+def MKD(inputs, currentDirectory, msgSocket, connectionID):
     if len(inputs) == 0:
         sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
         return
@@ -293,6 +302,7 @@ def MKD(inputs, currentDirectory, msgSocket):
             return
         open(currentDirectory + "/" + createDir, 'w')
         sendMsg(msgSocket, "257 " + createDir + " file created.")
+        writeLog("Connection " + str(connectionID) + " created a file at:" + currentDirectory + "/" + createDir )
         return
     
     createDir = flag + " " + createDir
@@ -305,11 +315,12 @@ def MKD(inputs, currentDirectory, msgSocket):
         return
     os.makedirs(currentDirectory + "/" + createDir)
     sendMsg(msgSocket, "257 " + createDir + " folder created.")
+    writeLog("Connection " + str(connectionID) + " created a folder at:" + currentDirectory + "/" + createDir )
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
-def RMD(inputs, currentDirectory, msgSocket, userID):
+def RMD(inputs, currentDirectory, msgSocket, userID, connectionID):
     if len(inputs) == 0:
         sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
         return
@@ -327,6 +338,7 @@ def RMD(inputs, currentDirectory, msgSocket, userID):
             return
         shutil.rmtree(removeDir)
         sendMsg(msgSocket, "250 " + tmpDir + " folder deleted.")
+        writeLog("Connection " + str(connectionID) + " removed a folder at:" + removeDir )
         return
     
     removeDir = flag + removeDir
@@ -340,6 +352,7 @@ def RMD(inputs, currentDirectory, msgSocket, userID):
     
     os.remove(removeDir)
     sendMsg(msgSocket, "250 " + tmpDir + " file deleted.")
+    writeLog("Connection " + str(connectionID) + " removed a file at:" + removeDir )
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
@@ -366,6 +379,7 @@ def DL(inputs, currentDirectory, msgSocket, fileSocket, userID):
         sendMsg(fileSocket, "file can not be transimitted.")
         sendMsg(msgSocket, "425 Can't open data connection.")
         return
+    writeLog("Connection " + str(connectionID) + " has downloaded the file at:" + downloadDir )
     sendMsg(msgSocket, "226 Successful Download.")    
     sendMsg(fileSocket, data)
     size[userID] -= len(data)
@@ -390,26 +404,31 @@ def sendMsg(msgSocket, message):
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
+logging.basicConfig(filename = loggingPath, format='%(relativeCreated)6d %(threadName)s %(message)s')
 preprocessUsers()
-accountingEnable = False
+writeLog("Status: starting")
 msgListenSocket = socket(AF_INET, SOCK_STREAM)
 msgListenSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-msgListenSocket.bind(("", MSGPORT))
+msgListenSocket.bind(("", commandChannelPort))
 msgListenSocket.listen(MAXLISTEN)
 
 fileListenSocket = socket(AF_INET, SOCK_STREAM)
 fileListenSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-fileListenSocket.bind(("", FILEPORT))
+fileListenSocket.bind(("", dataChannelPort))
 fileListenSocket.listen(MAXLISTEN)
+
+connectionID = 0
 
 while True:
     try:
-        print ("server listening")
-        msgSocket, address = msgListenSocket.accept()
+        writeLog ("Status: listening")
+        msgSocket, address1 = msgListenSocket.accept()
         #need to set a timeout later
         fileSocket, address = fileListenSocket.accept()
-        print ("creating new connection")
-        t = threading.Thread(target = handle_client, args = (msgSocket, fileSocket, address))
+        writeLog ("connection recieved from:" + str(address[0]) + " msgPORT: " + str(address1[1]) + " filePORT: " + str(address[1]))
+        connectionID = connectionID + 1
+        writeLog ("creating thread for connection number " + str(connectionID))
+        t = threading.Thread(target = handle_client, args = (msgSocket, fileSocket, address, connectionID))
         t.setDaemon(True)
         t.start()
     except KeyboardInterrupt:
