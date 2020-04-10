@@ -41,7 +41,7 @@ def sendMsg(message):
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
-file = open ('config.json', "r") 
+file = open ('etc/config.json', "r") 
 config = json.loads(file.read())
 msgPort = config['commandChannelPort']
 filePort = config['dataChannelPort']
