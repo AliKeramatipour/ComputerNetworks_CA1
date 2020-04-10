@@ -3,6 +3,7 @@ from socket import *
 import threading
 import sys
 import os
+import json
 
 
 MAXLISTEN = 15
@@ -55,7 +56,7 @@ PATH += "/"
 msgSocket = socket(AF_INET, SOCK_STREAM)
 msgSocket.bind(("", PORT))
 try :
-    msgSocket.connect(("", MSGPORT))
+    msgSocket.connect(("", msgPort))
 except error:
     print("500 could not establish connection to server")
     msgSocket.close()
@@ -65,7 +66,7 @@ fileSocket = socket(AF_INET, SOCK_STREAM)
 fileSocket.bind(("", PORT + 1))
 
 try:
-    fileSocket.connect(("", FILEPORT))
+    fileSocket.connect(("", filePort))
 except error:
     print("500 could not establish connection to server")
     msgSocket.close()
