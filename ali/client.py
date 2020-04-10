@@ -4,11 +4,11 @@ import threading
 import sys
 import os
 
-MSGPORT  = 9000
-FILEPORT = 9001
+
 MAXLISTEN = 15
 EOF = chr(26)
 MAXMSGLEN = 1000
+
 #--------------------------------------------------------------
 
 def recvNextMsg(msgSocket, inputBuffer):
@@ -39,6 +39,12 @@ def sendMsg(message):
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
+
+file = open ('config.json', "r") 
+config = json.loads(file.read())
+msgPort = config['commandChannelPort']
+filePort = config['dataChannelPort']
+file.close()
 
 PORT = int(raw_input("Enter port number: "))
 PATH = "clients/" + str(PORT)
