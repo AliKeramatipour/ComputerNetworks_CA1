@@ -391,6 +391,7 @@ def sendMsg(msgSocket, message):
 #--------------------------------------------------------------
 
 preprocessUsers()
+accountingEnable = False
 msgListenSocket = socket(AF_INET, SOCK_STREAM)
 msgListenSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 msgListenSocket.bind(("", MSGPORT))

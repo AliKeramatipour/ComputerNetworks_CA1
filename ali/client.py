@@ -12,21 +12,23 @@ MAXMSGLEN = 1000
 #--------------------------------------------------------------
 
 def recvNextMsg(msgSocket, inputBuffer):
-    data = ""
+    data = tmp = ""
+    msg = ""
     while True:
         data = msgSocket.recv(MAXMSGLEN)
         inputBuffer = inputBuffer + data
         
         if len(inputBuffer) % 2 == 1:
             continue
-        
-        msg = ""
+
         for i in range(0, len(inputBuffer)):
             if i % 2 == 1:
                 msg = msg + inputBuffer[i]
             else:
                 if inputBuffer[i] == '1':
                     return msg, inputBuffer[i+2:]
+        inputBuffer = ""
+        
                 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
