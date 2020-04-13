@@ -1,96 +1,122 @@
-import socket
+import time
+from socket import *
+import threading
+import sys
 import os
-import shutil
+import json
 
-SERVER = "127.0.0.1"
-PORT = 8080
 
-enteredPass = False
-user = ''
-currentDirectory = ''
-loggedIn = False
+MAXLISTEN = 15
+EOF = chr(26)
+MAXMSGLEN = 1000
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((SERVER, PORT))
-client.sendall(bytes("This is from Client",'UTF-8'))
+#--------------------------------------------------------------
+
+def recvNextMsg(msgSocket, inputBuffer):
+    data = tmp = ""
+    msg = ""
+    while True:
+        data = msgSocket.recv(MAXMSGLEN)
+        inputBuffer = inputBuffer + data
+        
+        if len(inputBuffer) % 2 == 1:
+            continue
+
+        for i in range(0, len(inputBuffer)):
+            if i % 2 == 1:
+                msg = msg + inputBuffer[i]
+            else:
+                if inputBuffer[i] == '1':
+                    return msg, inputBuffer[i+2:]
+        inputBuffer = ""
+        
+                
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+def sendMsg(message):
+    msgSocket.sendall(message + EOF)
+    return
+
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+
+file = open ('etc/config.json', "r") 
+config = json.loads(file.read())
+msgPort = config['commandChannelPort']
+filePort = config['dataChannelPort']
+file.close()
+
+PORT = -1
 while True:
-    in_data =  client.recv(1024)
-    msg = in_data.decode()
-    splitted = msg.split()
-    if(msg == '331 User name okay, need password.'):
-        enteredPass = True
-    if(msg == '430 Invalid usename or password'):
-        user = ''
-    if(msg == '230 User logged in, proceed.'):
-        currentDirectory = os.getcwd()
-        loggedIn = True
-    if(msg == 'PWD'):
-        if loggedIn:
-            msg = '257 ' + currentDirectory
-        else:
-            msg = '332 Need account for login.'
-    if(splitted[0] == 'MKD'):
-        if loggedIn:
-            if splitted[1] == '-i':
-                path = currentDirectory + '/' + splitted[2]
-                if not os.path.exists(path):
-                    os.makedirs(path)
-                    msg = '257 ' + splitted[2] + ' created.'
-                else:
-                    msg = '500 Error.'
-            else:
-                path = splitted[1]
-                if not os.path.exists(path):
-                    os.makedirs(path)
-                    msg = '257 ' + splitted[1] + ' created.'
-                else:
-                    msg = '500 Error.'
-        else:
-            msg = '332 Need account for login.'
-    if(splitted[0] == 'RMD'):# ?
-        if loggedIn:
-            if splitted[1] == '-f':
-                path = currentDirectory + '/' + splitted[2]
-                if os.path.exists(path):
-                    # os.remove(path)
-                    shutil.rmtree(path)
-                    msg = '250 ' + splitted[2] + ' deleted.'
-                else:
-                    msg = '500 Error.'
-            else:
-                path = splitted[1]
-                if os.path.exists(path):
-                    shutil.rmtree(path)
-                    # os.remove(path)
-                    msg = '250 ' + path + ' deleted.'
-                else:
-                    msg = '500 Error.'
-        else:
-            msg = '332 Need account for login.'
-    if(splitted[0] == 'CWD'):
-        if loggedIn:
-            path = splitted[1]
-            if os.path.exists(path):
-                os.chdir(path)
-                currentDirectory = os.getcwd()
-                msg = '250 Succesful Change.'
-        else:
-            msg = '332 Need account for login.'
-
-
-    print("From Server :" ,msg)
-    out_data = input()
-    splitted = out_data.split()
-    if splitted[0] == 'USER':
-        user = splitted[1]
-    if (enteredPass and splitted[0] == 'PASS'):
-        enteredPass = False
-        out_data = '*T ' + user + ' ' + splitted[1]
-    if (enteredPass and splitted[0] != 'PASS'):
-        enteredPass = False
-        user = ''
-        out_data = "*F " + out_data
-    client.sendall(bytes(out_data,'UTF-8'))
-    if out_data=='bye':
+    try:
+        PORT = int(raw_input("Enter port number: "))
+        if PORT <= 0 or PORT >= 65535:
+            print("500 enter a between 1 and 65534")
+            continue
         break
-client.close()
+    except ValueError:
+        print("500 enter a number")
+PATH = "clients/" + str(PORT)
+if not os.path.exists(PATH):
+    os.makedirs(str(PATH))
+PATH += "/"
+
+msgSocket = socket(AF_INET, SOCK_STREAM)
+msgSocket.bind(("", PORT))
+try :
+    msgSocket.connect(("", msgPort))
+except error:
+    print("500 could not establish connection to server")
+    msgSocket.close()
+    sys.exit()
+
+fileSocket = socket(AF_INET, SOCK_STREAM)
+fileSocket.bind(("", PORT + 1))
+
+try:
+    fileSocket.connect(("", filePort))
+except error:
+    print("500 could not establish connection to server")
+    msgSocket.close()
+    fileSocket.close()
+    sys.exit()
+
+
+data = inputBuffer = fileData = fileBuffer = ""
+data, inputBuffer = recvNextMsg(msgSocket, inputBuffer) 
+print(data)
+while True:
+    try:
+        cmd = raw_input("your next command: ")
+        sendMsg(cmd)
+        data, inputBuffer = recvNextMsg(msgSocket, inputBuffer) 
+        print(data)
+        if data[0:3] == "332":
+            continue
+        if data[0:3] == "500":
+            continue
+        if data[0:3] == "550":
+            continue
+        if data[0:3] == "501":
+            continue
+        if data[0:3] == "425":
+            continue
+            
+        if cmd == "QUIT":
+            sys.exit()
+        if cmd == "LIST":
+            fileData, fileBuffer = recvNextMsg(fileSocket, fileBuffer)
+            print (fileData)
+        if ( cmd[0:2] == "DL" ):
+            f = open(PATH + cmd[3:len(cmd)],"w+")
+            fileData, fileBuffer = recvNextMsg(fileSocket, fileBuffer)
+            f.write(fileData)
+            f.close()
+            data, inputBuffer = recvNextMsg(msgSocket, inputBuffer)
+            print(data)
+    except:
+        msgSocket.close()
+        fileSocket.close()
+        sys.exit()
+
