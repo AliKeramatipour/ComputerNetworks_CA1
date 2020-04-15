@@ -161,7 +161,7 @@ def handle_client(msgSocket, fileSocket, address, connectionID):
                 continue
             elif data == "DL":
                 DL(inputs, currentDirectory, msgSocket, fileSocket, userID)
-                if size[userID] < accountingThreshold and alert[userID]:
+                if size[userID] < accountingThreshold and alert[userID] and accountingEnable:
                     sendEmail(userID)
                 continue
         
