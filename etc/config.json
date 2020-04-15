@@ -28,7 +28,7 @@
     }
   ],
   "accounting": {
-    "enable": true,
+    "enable": false,
     "threshold": 100,
     "users": [
       {
@@ -70,11 +70,11 @@
     ]
   },
   "logging": {
-    "enable": true,
+    "enable": false,
     "path": "./logs.log"
   },
   "authorization": {
-    "enable": true,
+    "enable": false,
     "admins": [
       "farzad",
       "ali"

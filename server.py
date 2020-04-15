@@ -450,7 +450,7 @@ def RMD(inputs, currentDirectory, msgSocket, userID, connectionID):
     removeDir = currentDirectory + "/" + removeDir
     # removeDir = removeDir[:-1]
 
-    if (not os.path.exists(removeDir)) or (removeDir in authorizationFiles and admin[userID] == 0):
+    if (not os.path.exists(removeDir)) or (removeDir in authorizationFiles and admin[userID] == 0 and authorizationEnable):
         sendMsg(msgSocket, "550 File unavailable.")
         return
     try:
@@ -477,7 +477,7 @@ def DL(inputs, currentDirectory, msgSocket, fileSocket, userID):
         return
 
     downloadDir = currentDirectory + "/" + filename
-    if (not os.path.exists(downloadDir) or (downloadDir in authorizationFiles and admin[userID] == 0)):
+    if (not os.path.exists(downloadDir) or (downloadDir in authorizationFiles and admin[userID] == 0 and authorizationEnable)):
         sendMsg(msgSocket, "550 File unavailable.")
         return
 
