@@ -402,8 +402,7 @@ def MKD(inputs, currentDirectory, msgSocket, connectionID):
         writeLog("Connection " + str(connectionID) + " created a file at:" + currentDirectory + "/" + createDir )
         return
     
-    createDir = flag + " " + createDir
-    createDir = createDir[:-1]
+    createDir = inputs[:-1]
     if '/' in createDir or createDir == '.' or createDir == '..':
         sendMsg(msgSocket, "500 Cannot have '/' in filename or '.' or '..' as filename")
         return
