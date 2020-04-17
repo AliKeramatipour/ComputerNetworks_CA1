@@ -373,7 +373,7 @@ def CWD(inputs, currentDirectory, msgSocket):
         
         currentDirectoryList.append(folder)
         tempDir = '/'.join(currentDirectoryList)
-        if not os.path.exists(tempDir):
+        if not os.path.exists(tempDir) or os.path.isfile(tempDir):
             sendMsg(msgSocket, "500 Not a valid directory.")
             return currentDirectory
     
@@ -398,7 +398,7 @@ def MKD(inputs, currentDirectory, msgSocket, connectionID):
             sendMsg(msgSocket, "500 Cannot have '/' in filename or '.' or '..' as filename")
             return
         if os.path.exists(currentDirectory + "/" + createDir):
-            sendMsg(msgSocket, "500 File already exists")
+            sendMsg(msgSocket, "500 Name already exists")
             return
         open(currentDirectory + "/" + createDir, 'w')
         sendMsg(msgSocket, "257 " + createDir + " file created.")
@@ -411,7 +411,7 @@ def MKD(inputs, currentDirectory, msgSocket, connectionID):
         sendMsg(msgSocket, "500 Cannot have '/' in filename or '.' or '..' as filename")
         return
     if os.path.exists(currentDirectory + "/" + createDir):
-        sendMsg(msgSocket, "500 Folder already exists")
+        sendMsg(msgSocket, "500 Name already exists")
         return
     os.makedirs(currentDirectory + "/" + createDir)
     sendMsg(msgSocket, "257 " + createDir + " folder created.")
