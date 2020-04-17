@@ -367,9 +367,6 @@ def CWD(inputs, currentDirectory, msgSocket):
                 continue
         elif folder == '.':
             continue
-        if '.' in folder:
-            sendMsg(msgSocket, "500 Not a valid directory.")
-            return currentDirectory
         
         currentDirectoryList.append(folder)
         tempDir = '/'.join(currentDirectoryList)
