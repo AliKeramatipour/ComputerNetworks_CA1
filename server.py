@@ -470,17 +470,13 @@ def DL(inputs, currentDirectory, msgSocket, fileSocket, userID):
         sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
         return
     
-
-    filename, inputs = inputs.split(" ",1)
-    if len(inputs) != 0:
-        sendMsg(msgSocket, "501 Syntax error in parameters or arguments.")
-        return
+    filename = inputs[:-1]
 
     downloadDir = currentDirectory + "/" + filename
     if (not os.path.exists(downloadDir) or (downloadDir in authorizationFiles and admin[userID] == 0 and authorizationEnable)):
         sendMsg(msgSocket, "550 File unavailable.")
         return
-
+    
     try:
         f = open(downloadDir, "rb")
         data = f.read()

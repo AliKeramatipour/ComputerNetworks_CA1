@@ -28,7 +28,7 @@
     }
   ],
   "accounting": {
-    "enable": true,
+    "enable": false,
     "threshold": 100,
     "users": [
       {
@@ -83,7 +83,7 @@
       "./etc/config.json",
       "./dir/example.png",
       "./dir/email.py",
-      "./dir/1.zip",
+      "./dir/2.JPG",
       "./dir/Crash.Landing.on.You.E08.srt",
       "./dir/Chapter_2_V7.01.pptx"
     ]
