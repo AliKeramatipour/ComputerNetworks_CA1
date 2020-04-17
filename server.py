@@ -446,7 +446,7 @@ def RMD(inputs, currentDirectory, msgSocket, userID, connectionID):
             sendMsg(msgSocket, "501 Syntax error in parameters or arguments. Use RMD [filename] to remove a file.")
             return
 
-    removeDir = flag + removeDir
+    removeDir = inputs[:-1]
     tmpDir = removeDir
     removeDir = currentDirectory + "/" + removeDir
 
