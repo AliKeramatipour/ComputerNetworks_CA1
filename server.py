@@ -179,47 +179,46 @@ def sendEmail(userID):
     clientSocket.connect(mailserver)
     recv = clientSocket.recv(1024)
     recv = recv.decode()
-    # print("Message after connection request:" + recv)
     if recv[:3] != '220':
-        print('error in connction request.')
+        print('error in connection request.')
         clientSocket.close()
         return
+    
     heloCommand = 'HELO ' + MAILSERVER + '\r\n'
     clientSocket.send(heloCommand.encode())
     recv1 = clientSocket.recv(1024)
     recv1 = recv1.decode()
-    # print("Message after HELO command:" + recv1)
     if recv1[:3] != '250':
         print('error in HELO.')
         clientSocket.close()
         return
-    #MAIL FROM
+    
     mailFrom = "MAIL FROM:<"+EMAIL+">\r\n"
     clientSocket.send(mailFrom.encode())
     recv2 = clientSocket.recv(1024)
     recv2 = recv2.decode()
-    # print("After MAIL FROM command: "+recv2)
+    
     if recv2[:3] != '250':
         print('error in MAIL FROM.')
         clientSocket.close()
         return
-    #LOGIN INFO
+    
     authLogin = "AUTH LOGIN\r\n"
     clientSocket.send(authLogin.encode())
     recv2 = clientSocket.recv(1024)
     recv2 = recv2.decode()
-    # print("After AUTH LOGIN command: "+recv2)
+
     if recv2[:3] != '334':
         print('error in AUTH LOGIN.')
         clientSocket.close()
         return
-    ####
+    
     username = b64encode(USERNAME)+"\r\n"
     password = b64encode(PASSWORD)+"\r\n"
     clientSocket.send((username).encode())
     recv2 = clientSocket.recv(1024)
     recv2 = recv2.decode()
-    # print("After username command: "+recv2)
+
     if recv2[:3] != '334':
         print('error in username.')
         clientSocket.close()
@@ -227,28 +226,28 @@ def sendEmail(userID):
     clientSocket.send(password.encode())
     recv2 = clientSocket.recv(1024)
     recv2 = recv2.decode()
-    # print("After password command: "+recv2)
+
     if recv2[:3] != '235':
         print('error in password.')
         clientSocket.close()
         return
-    #RCPT TO
-    # rcptTo = "RCPT TO:<"+email[userID]+">\r\n"
+
+    
     rcptTo = "RCPT TO:<neginbaghbanzade@ut.ac.ir>\r\n"
     clientSocket.send(rcptTo.encode())
     recv3 = clientSocket.recv(1024)
     recv3 = recv3.decode()
-    # print("After RCPT TO command: "+recv3)
+
     if recv3[:3] != '250':
         print('error in RCPT TO.')
         clientSocket.close()
         return
-    #DATA
+    
     data = "DATA\r\n"
     clientSocket.send(data.encode())
     recv4 = clientSocket.recv(1024)
     recv4 = recv4.decode()
-    # print("After DATA command: "+recv4)
+
     if recv4[:3] != '354':
         print('error in DATA.')
         clientSocket.close()
@@ -257,7 +256,7 @@ def sendEmail(userID):
     clientSocket.send(message.encode())
     recv4 = clientSocket.recv(1024)
     recv4 = recv4.decode()
-    # print("After message command: "+recv4)
+
     if recv4[:3] != '250':
         print('error in message.')
         clientSocket.close()
@@ -448,8 +447,7 @@ def RMD(inputs, currentDirectory, msgSocket, userID, connectionID):
     removeDir = flag + removeDir
     tmpDir = removeDir
     removeDir = currentDirectory + "/" + removeDir
-    # removeDir = removeDir[:-1]
-
+    
     if (not os.path.exists(removeDir)) or (removeDir in authorizationFiles and admin[userID] == 0 and authorizationEnable):
         sendMsg(msgSocket, "550 File unavailable.")
         return
@@ -537,7 +535,7 @@ while True:
         msgSocket, address1 = msgListenSocket.accept()
         #need to set a timeout later
         fileSocket, address = fileListenSocket.accept()
-        writeLog ("connection recieved from:" + str(address[0]) + " msgPORT: " + str(address1[1]) + " filePORT: " + str(address[1]))
+        writeLog ("connection received from:" + str(address[0]) + " msgPORT: " + str(address1[1]) + " filePORT: " + str(address[1]))
         connectionID = connectionID + 1
         writeLog ("creating thread for connection number " + str(connectionID))
         t = threading.Thread(target = handle_client, args = (msgSocket, fileSocket, address, connectionID))
