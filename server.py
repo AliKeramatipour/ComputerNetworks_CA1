@@ -175,7 +175,7 @@ def handle_client(msgSocket, fileSocket, address, connectionID):
 #--------------------------------------------------------------
 
 def sendEmail(userID):
-    writeLog("Sending email to user" + str(userID))
+    writeLog("Sending email to user " + str(userID) + " with email address " + email[userID])
     mailserver = (MAILSERVER, 25)
     clientSocket = socket(AF_INET, SOCK_STREAM)
     clientSocket.connect(mailserver)
@@ -235,7 +235,7 @@ def sendEmail(userID):
         return
 
     
-    rcptTo = "RCPT TO:<neginbaghbanzade@ut.ac.ir>\r\n"
+    rcptTo = "RCPT TO:<" + email[userID] + ">\r\n"
     clientSocket.send(rcptTo.encode())
     recv3 = clientSocket.recv(1024)
     recv3 = recv3.decode()
@@ -254,7 +254,7 @@ def sendEmail(userID):
         print('error in DATA.')
         clientSocket.close()
         return
-    message = "your data is running out\r\n.\r\n"
+    message = "You are running out of download space.\r\n.\r\n"
     clientSocket.send(message.encode())
     recv4 = clientSocket.recv(1024)
     recv4 = recv4.decode()
