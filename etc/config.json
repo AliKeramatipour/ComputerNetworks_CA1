@@ -28,7 +28,7 @@
     }
   ],
   "accounting": {
-    "enable": false,
+    "enable": true,
     "threshold": 100,
     "users": [
       {
@@ -45,27 +45,27 @@
       },
       {
       	"user": "ali",
-      	"size": "1234988796",
-	"email": "alikeramatipour@ut.ac.ir",
-	"alert": true
+      	"size": "99",
+        "email": "alikeramatipour@ut.ac.ir",
+        "alert": true
       },
       {
       	"user": "baek",
       	"size": "9",
-	"email": "neginbaghbanzadeh@ut.ac.ir",
-	"alert": true
+        "email": "neginbaghbanzadeh@ut.ac.ir",
+        "alert": true
       },
       {
       	"user": "sam",
       	"size": "10000000",
-	"email": "alikeramatipour@ut.ac.ir",
-	"alert": false
+        "email": "alikeramatipour@ut.ac.ir",
+        "alert": false
       },
       {
       	"user": "negin",
       	"size": "2",
-	"email": "neginbaghbanzade@ut.ac.ir",
-	"alert": true
+        "email": "neginbaghbanzade@ut.ac.ir",
+        "alert": true
        }
     ]
   },

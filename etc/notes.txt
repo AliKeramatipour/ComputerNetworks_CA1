@@ -19,7 +19,7 @@ need to test:
     RMD
     DL
 
-need to set a timeour for our fileSocket connection
+need to set a timeout for our fileSocket connection
 
 -racecondition
 -email

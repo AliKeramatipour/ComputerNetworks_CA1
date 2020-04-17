@@ -80,6 +80,7 @@ def writeLog(text):
         return
     with open(loggingPath, 'a') as log:
         log.write("{0} - {1}\n\n".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),str(text)))
+    print("LOG:{0} - {1}".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),str(text)))
     return
 
 #--------------------------------------------------------------
@@ -110,7 +111,7 @@ def handle_client(msgSocket, fileSocket, address, connectionID):
     sendMsg(msgSocket, "Connection established. \nenter HELP for command list." )
     while True:
         instruction, inputBuffer = recvNextMsg(msgSocket, inputBuffer)
-        writeLog("Instruction recieved on connection: " + str(connectionID) + "\n" + instruction)
+        writeLog("Instruction received on connection: " + str(connectionID) + "\n" + instruction)
         instruction = instruction + " "
         data, inputs = instruction.split(" ",1)
 
@@ -174,6 +175,7 @@ def handle_client(msgSocket, fileSocket, address, connectionID):
 #--------------------------------------------------------------
 
 def sendEmail(userID):
+    writeLog("Sending email to user" + str(userID))
     mailserver = (MAILSERVER, 25)
     clientSocket = socket(AF_INET, SOCK_STREAM)
     clientSocket.connect(mailserver)
@@ -447,7 +449,7 @@ def RMD(inputs, currentDirectory, msgSocket, userID, connectionID):
     removeDir = flag + removeDir
     tmpDir = removeDir
     removeDir = currentDirectory + "/" + removeDir
-    
+
     if (not os.path.exists(removeDir)) or (removeDir in authorizationFiles and admin[userID] == 0 and authorizationEnable):
         sendMsg(msgSocket, "550 File unavailable.")
         return
@@ -483,7 +485,6 @@ def DL(inputs, currentDirectory, msgSocket, fileSocket, userID):
         f = open(downloadDir, "rb")
         data = f.read()
         if len(data) > size[userID] and accountingEnable:
-            sendMsg(fileSocket, "file can not be transimitted.")
             sendMsg(msgSocket, "425 Can't open data connection.")
             return
         writeLog("Connection " + str(connectionID) + " has downloaded the file at:" + downloadDir )  
@@ -533,7 +534,6 @@ while True:
     try:
         writeLog ("Status: listening")
         msgSocket, address1 = msgListenSocket.accept()
-        #need to set a timeout later
         fileSocket, address = fileListenSocket.accept()
         writeLog ("connection received from:" + str(address[0]) + " msgPORT: " + str(address1[1]) + " filePORT: " + str(address[1]))
         connectionID = connectionID + 1
